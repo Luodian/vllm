@@ -37,6 +37,8 @@ class CompletionOutput:
             to stop, None if the completion finished for some other reason
             including encountering the EOS token.
         lora_request: The LoRA request that was used to generate the output.
+        hidden_states: The hidden states from the model's last layer for each
+            generated token. Shape: [num_tokens, hidden_dim].
     """
 
     index: int
@@ -47,6 +49,7 @@ class CompletionOutput:
     finish_reason: Optional[str] = None
     stop_reason: Union[int, str, None] = None
     lora_request: Optional[LoRARequest] = None
+    hidden_states: Optional[torch.Tensor] = None
 
     def finished(self) -> bool:
         return self.finish_reason is not None
@@ -58,7 +61,8 @@ class CompletionOutput:
                 f"cumulative_logprob={self.cumulative_logprob}, "
                 f"logprobs={self.logprobs}, "
                 f"finish_reason={self.finish_reason}, "
-                f"stop_reason={self.stop_reason})")
+                f"stop_reason={self.stop_reason}, "
+                f"hidden_states={'<tensor>' if self.hidden_states is not None else None})")
 
 
 @dataclass
@@ -100,6 +104,8 @@ class RequestOutput:
                                   None if decoder-only.
         num_cached_tokens: The number of tokens with prefix cache hit.
         kv_transfer_params: The params for remote K/V transfer.
+        hidden_states: The hidden states from the model for this request.
+                      Shape depends on the model and generation length.
     """
 
     def __init__(
@@ -118,6 +124,7 @@ class RequestOutput:
         *,
         multi_modal_placeholders: Optional[MultiModalPlaceholderDict] = None,
         kv_transfer_params: Optional[dict[str, Any]] = None,
+        hidden_states: Optional[torch.Tensor] = None,
         # Forward compatibility, code that uses args added in new release can
         # still run with older versions of vLLM without breaking.
         **kwargs: Any,
@@ -138,6 +145,7 @@ class RequestOutput:
         self.encoder_prompt_token_ids = encoder_prompt_token_ids
         self.num_cached_tokens = num_cached_tokens
         self.kv_transfer_params = kv_transfer_params
+        self.hidden_states = hidden_states
 
     def add(self, next_output: "RequestOutput", aggregate: bool) -> None:
         """Merge subsequent RequestOutput into this one"""
@@ -291,7 +299,8 @@ class RequestOutput:
                     seq.get_cumulative_logprob() if include_logprobs else None,
                     output_logprobs,
                     SequenceStatus.get_finished_reason(seq.status),
-                    seq.stop_reason)
+                    seq.stop_reason,
+                    hidden_states=None)  # Per-sequence hidden states can be added here if needed
 
             outputs.append(output)
 
@@ -323,7 +332,8 @@ class RequestOutput:
             "encoder_prompt": encoder_prompt,
             "encoder_prompt_token_ids": encoder_prompt_token_ids,
             "num_cached_tokens": num_cached_tokens,
-            "multi_modal_placeholders": seq_group.multi_modal_placeholders
+            "multi_modal_placeholders": seq_group.multi_modal_placeholders,
+            "hidden_states": seq_group.hidden_states
         }
 
         if use_cache:

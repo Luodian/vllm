@@ -186,6 +186,7 @@ class LLM:
                                            CompilationConfig]] = None,
         logits_processors: Optional[list[Union[str,
                                                type[LogitsProcessor]]]] = None,
+        return_hidden_states: bool = False,
         **kwargs: Any,
     ) -> None:
         """LLM constructor."""
@@ -261,6 +262,7 @@ class LLM:
             override_pooler_config=override_pooler_config,
             compilation_config=compilation_config_instance,
             logits_processors=logits_processors,
+            return_hidden_states=return_hidden_states,
             **kwargs,
         )
 

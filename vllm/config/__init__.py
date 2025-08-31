@@ -3400,6 +3400,8 @@ class VllmConfig:
     you are using. Contents must be hashable."""
     instance_id: str = ""
     """The ID of the vLLM instance."""
+    return_hidden_states: bool = False
+    """Whether to return hidden states from the model."""
 
     def compute_hash(self) -> str:
         """

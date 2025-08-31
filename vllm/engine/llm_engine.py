@@ -898,20 +898,31 @@ class LLMEngine:
 
             if outputs:
                 for o in outputs:
-                    if (isinstance(o, SamplerOutput)
-                            and seq_group.metrics is not None):
-                        if seq_group.metrics.model_forward_time is not None:
-                            seq_group.metrics.model_forward_time += (
-                                o.model_forward_time or 0)
-                        else:
-                            seq_group.metrics.model_forward_time = (
-                                o.model_forward_time)
-                        if seq_group.metrics.model_execute_time is not None:
-                            seq_group.metrics.model_execute_time += (
-                                o.model_execute_time or 0)
-                        else:
-                            seq_group.metrics.model_execute_time = (
-                                o.model_execute_time)
+                    if isinstance(o, SamplerOutput):
+                        # Store hidden states if available
+                        if o.hidden_states is not None:
+                            # Store the hidden states in the sequence group
+                            # If there are already hidden states, concatenate them
+                            if seq_group.hidden_states is not None:
+                                import torch
+                                seq_group.hidden_states = torch.cat(
+                                    [seq_group.hidden_states, o.hidden_states], dim=0)
+                            else:
+                                seq_group.hidden_states = o.hidden_states
+                        
+                        if seq_group.metrics is not None:
+                            if seq_group.metrics.model_forward_time is not None:
+                                seq_group.metrics.model_forward_time += (
+                                    o.model_forward_time or 0)
+                            else:
+                                seq_group.metrics.model_forward_time = (
+                                    o.model_forward_time)
+                            if seq_group.metrics.model_execute_time is not None:
+                                seq_group.metrics.model_execute_time += (
+                                    o.model_execute_time or 0)
+                            else:
+                                seq_group.metrics.model_execute_time = (
+                                    o.model_execute_time)
 
             self.output_processor.process_prompt_logprob(seq_group, output)
             if seq_group_meta.do_sample:

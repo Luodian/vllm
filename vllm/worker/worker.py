@@ -88,6 +88,7 @@ class Worker(LocalOrDistributedWorkerBase):
             vllm_config=self.vllm_config,
             kv_cache_dtype=self.cache_config.cache_dtype,
             is_driver_worker=is_driver_worker,
+            return_hidden_states=self.vllm_config.return_hidden_states,
             **speculative_args,
         )
         if model_runner_cls is not None:
